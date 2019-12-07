@@ -10,11 +10,9 @@ import (
 	"io/ioutil"
 )
 
-func run(prog []int, noun, verb int) int {
+func run(prog []int, in chan int, out chan int) int {
 	mem := make([]int, len(prog))
 	copy(mem, prog)
-//	mem[1] = noun
-//	mem[2] = verb
 	if true {
 		log.SetOutput(ioutil.Discard)
 	}
@@ -33,17 +31,12 @@ func run(prog []int, noun, verb int) int {
 			pc += 4
 		case 3: // input
 			log.Print(pc, mem[pc:pc+2])
-			fmt.Print("Input: ")
-			var i int
-			_, err := fmt.Scanf("%d", &i)
-			if err != nil {
-				log.Fatal("Error reading input")
-			}
+			i := <-in
 			mem[mem[pc+1]] = i
 			pc += 2
 		case 4: // output
 			log.Print(pc, mem[pc:pc+2])
-			fmt.Println("Output: ", get(mem, pc, 1))
+			out <- get(mem, pc, 1)
 			pc += 2
 		case 5: // jump if true
 			log.Print(pc, mem[pc:pc+3])
@@ -77,6 +70,7 @@ func run(prog []int, noun, verb int) int {
 			pc += 4
 		case 99:
 			log.Print(mem[pc:pc+1])
+			close(out)
 			return mem[0]
 		default:
 			fmt.Println(mem)
@@ -109,11 +103,77 @@ func get(mem []int, pc int, arg int) int {
 	}
 }
 
+func permutations(arr []int)[][]int{
+	var helper func([]int, int)
+	res := [][]int{}
+
+	helper = func(arr []int, n int){
+		if n == 1{
+			tmp := make([]int, len(arr))
+			copy(tmp, arr)
+			res = append(res, tmp)
+		} else {
+			for i := 0; i < n; i++{
+				helper(arr, n - 1)
+				if n % 2 == 1{
+					tmp := arr[i]
+					arr[i] = arr[n - 1]
+					arr[n - 1] = tmp
+				} else {
+					tmp := arr[0]
+					arr[0] = arr[n - 1]
+					arr[n - 1] = tmp
+				}
+			}
+		}
+	}
+	helper(arr, len(arr))
+	return res
+}
+
+
+func runAmps(prog []int, settings []int) int {
+	chans := []chan int{}
+	for _, s := range settings {
+		c := make(chan int, 10)
+		c <- s
+		chans = append(chans, c)
+	}
+	out := make(chan int, 10)
+
+	chans[0] <- 0
+
+	for i := 0; i < len(chans) - 1; i++ {
+		go run(prog, chans[i], chans[i+1])
+	}
+	go run(prog, chans[len(chans) - 1], out)
+
+	output := 0
+	for {
+		v, ok := <- out
+		if !ok {
+			return output
+		}
+		output = v
+		chans[0] <- v
+	}
+}
 
 func main() {
-	//prog := parseProgram("3,21,1008,21,8,20,1005,20,22,107,8,21,20,1006,20,31,1106,0,36,98,0,0,1002,21,125,20,4,20,1105,1,46,104,999,1105,1,46,1101,1000,1,20,4,20,1105,1,46,98,99")
-	prog := parseProgram(readFile("intcode2.txt"))
-	fmt.Println(run(prog, 12, 2))
+	//prog := parseProgram("3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,-5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10")
+	prog := parseProgram(readFile("amp.txt"))
+
+	//max := runAmps(prog, []int{9,7,8,5,6})
+
+	max := 0
+	for _, settings := range(permutations([]int{5, 6, 7, 8, 9})) {
+		m := runAmps(prog, settings)
+		if m > max {
+			max = m
+		}
+	}
+
+	fmt.Println(max)
 }
 
 func parseProgram(s string) []int {
