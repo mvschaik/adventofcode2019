@@ -34,27 +34,34 @@ const (
 
 func main() {
     t := loadFile("password.txt")
-    slices := [][COLS][ROWS]int{[COLS][ROWS]int{}}
-    counts := [][3]int{[3]int{}}
+    slices := [][ROWS][COLS]int{[ROWS][COLS]int{}}
     for i, c := range t {
         slice := len(slices) - 1
-        row := i % len(slices[slice])
-        col := (i / len(slices[slice])) % len(slices[slice][row])
+        row := (i / COLS) % ROWS
+        col := i % COLS
         slices[slice][row][col] = int(c - '0')
-        counts[slice][int(c - '0')]++
-        if col == len(slices[slice][row]) - 1 && row == len(slices[slice]) - 1 && i < len(t) - 1 {
-            slices = append(slices, [25][6]int{})
-            counts = append(counts, [3]int{})
+        if col == len(slices[slice][col]) - 1 && row == len(slices[slice]) - 1 && i < len(t) - 1 {
+            slices = append(slices, [ROWS][COLS]int{})
         }
     }
 
-    sI := 0
-    sC := COLS * ROWS
-    for i, c := range counts {
-        if c[0] < sC {
-            sC = c[0]
-            sI = i
+    pict := [ROWS][COLS]int{}
+    for r, _ := range pict {
+        for c, _ := range pict[0] {
+            s := 0
+            for ; slices[s][r][c] == 2; s++ {}
+            pict[r][c] = slices[s][r][c]
         }
     }
-    fmt.Println(counts[sI][1] * counts[sI][2])
+
+    for _, r := range pict {
+        for _, c := range r {
+            if c == 0 {
+                fmt.Print(" ")
+            } else {
+                fmt.Print("█")
+            }
+        }
+        fmt.Println()
+    }
 }
