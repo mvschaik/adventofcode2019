@@ -181,7 +181,8 @@ func main() {
 	pos := loc{0, 0}
 	dir := up
 	go run(prog, in, out)
-	in <- 0
+	field[pos] = 1
+	in <- 1
 	for {
 		//fmt.Printf("@ %v %v\n", pos, dir)
 		//printField(field, pos, dir)
