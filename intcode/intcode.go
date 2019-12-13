@@ -1,4 +1,4 @@
-package main
+package intcode
 
 import (
 	"bufio"
@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 )
 
-func run(prog []int, in chan int, out chan int) int {
+func Run(prog []int, in chan int, out chan int) int {
 	mem := make(map[int]int)
 	for i, v := range(prog) {
 		mem[i] = v
@@ -129,132 +129,7 @@ func run(prog []int, in chan int, out chan int) int {
 	return -1
 }
 
-type loc struct {
-	x, y int
-}
-
-var (
-	up = loc{0, -1}
-	down = loc{0, 1}
-	left = loc{-1, 0}
-	right = loc{1, 0}
-)
-
-func (l loc) move(dir loc) loc {
-	return loc{l.x + dir.x, l.y + dir.y}
-}
-
-func turnLeft(d loc) loc {
-	switch d {
-	case up:
-		return left
-	case left:
-		return down
-	case down:
-		return right
-	case right:
-		return up
-	}
-	return d
-}
-
-func turnRight(d loc) loc {
-	switch d {
-	case up:
-		return right
-	case right:
-		return down
-	case down:
-		return left
-	case left:
-		return up
-	}
-	return d
-}
-
-func main() {
-	prog := parseProgram(readFile("paint.txt"))
-
-	field := make(map[loc]int)
-	in := make(chan int, 10)
-	out := make(chan int, 10)
-	pos := loc{0, 0}
-	dir := up
-	go run(prog, in, out)
-	field[pos] = 1
-	in <- 1
-	for {
-		//fmt.Printf("@ %v %v\n", pos, dir)
-		//printField(field, pos, dir)
-		//fmt.Println()
-		// fmt.Scanln()
-
-		color, ok := <-out
-		if !ok {
-			fmt.Println("Done!")
-			break
-		}
-		d, ok := <-out
-		if !ok {
-			break
-		}
-
-		//fmt.Printf("(%v, %v)\n", color, d)
-
-		field[pos] = color
-		if d == 0 {
-			dir = turnLeft(dir)
-		} else {
-			dir = turnRight(dir)
-		}
-		pos = pos.move(dir)
-		in <- field[pos]
-	}
-	printField(field, pos, dir)
-	fmt.Println("Count: ", len(field))
-}
-
-func printField(field map[loc]int, pos, dir loc) {
-	var minx, miny, maxx, maxy int
-	for l, _ := range field {
-		if l.x < minx {
-			minx = l.x
-		}
-		if l.x > maxx {
-			maxx = l.x
-		}
-		if l.y < miny {
-			miny = l.y
-		}
-		if l.y > maxy {
-			maxy = l.y
-		}
-	}
-	for y := miny - 2; y <= maxy + 2; y++ {
-		for x := minx - 2; x <= maxx + 2; x++ {
-			l := loc{x, y}
-			if pos == l {
-				switch dir {
-				case up:
-					fmt.Print("^")
-				case down:
-					fmt.Print("v")
-				case left:
-					fmt.Print("<")
-				case right:
-					fmt.Print(">")
-				}
-			} else if field[l] == 1 {
-				fmt.Print("#")
-			} else {
-				fmt.Print(".")
-			}
-		}
-		fmt.Println()
-	}
-}
-
-func parseProgram(s string) []int {
+func ParseProgram(s string) []int {
 	nums := strings.Split(s, ",")
 	prog := make([]int, len(nums))
 	for i, n := range nums {
@@ -267,7 +142,7 @@ func parseProgram(s string) []int {
 	return prog
 }
 
-func readFile(filename string) string {
+func ReadFile(filename string) string {
 	f, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
