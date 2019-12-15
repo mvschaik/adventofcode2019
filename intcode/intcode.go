@@ -2,17 +2,17 @@ package intcode
 
 import (
 	"bufio"
-	"os"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 	"strings"
-	"io/ioutil"
 )
 
 func Run(prog []int, in chan int, out chan int) int {
 	mem := make(map[int]int)
-	for i, v := range(prog) {
+	for i, v := range prog {
 		mem[i] = v
 	}
 	if true {
