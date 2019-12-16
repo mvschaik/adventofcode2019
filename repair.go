@@ -23,7 +23,6 @@ type world struct {
 type path struct {
 	dest coord
 	p []int
-	cs []coord
 }
 
 const (
@@ -36,6 +35,7 @@ const (
 	south = 2
 	west = 3
 	east = 4
+
 )
 
 var dir = map[int]coord{
@@ -44,6 +44,8 @@ var dir = map[int]coord{
 	west: {-1, 0},
 	east: {1, 0},
 }
+
+var	dirs = []int{north, west, east, south}
 
 func (c coord) move(d int) coord {
 	dc := dir[d]
@@ -79,101 +81,32 @@ func (w *world) tryMove(d int) {
 	}
 }
 
-func (p path) check(s coord) {
-	ip := s
-	for i, d := range p.p {
-		ip = ip.move(d)
-		if p.cs[i] != ip {
-			panic(fmt.Sprintf("uh oh... %v -> %v", s, p))
-		}
-	}
-	if len(p.cs) > 0 && p.dest != p.cs[len(p.cs) - 1] {
-		panic(fmt.Sprintf("uh oh 2... %v -> %v", s, p))
-	}
-}
-
 func pathToUnknown(w world) []int {
 	seen := make(map[coord]bool)
 	seen[w.d.pos] = true
-	dirs := []int{north, west, east, south}
-	togo := []path{{w.d.pos, []int{}, []coord{}}}
+	togo := []path{{w.d.pos, []int{}}}
 
 	for len(togo) > 0 {
-		for _, pp := range togo {
-			pp.check(w.d.pos)
-		}
-		t := togo[0]
-		t.check(w.d.pos)
-		togo = togo[1:]
-		for _, pp := range togo {
-			pp.check(w.d.pos)
-		}
-		//ip := w.d.pos
-		//for _, dd := range t.p {
-		//	ip = ip.move(dd)
-		//	//fmt.Print(" -",dd,"-> ", w.m[ip])
-		//	if w.m[ip] != nothing {
-		//		panic("Oh noes")
-		//	}
-		//}
+		var t path
+		t, togo = togo[0], togo[1:]
 
 		for _, d := range dirs {
-			for _, pp := range togo {
-				pp.check(w.d.pos)
-			}
-			t.check(w.d.pos)
 			newPos := t.dest.move(d)
-			t.check(w.d.pos)
 			if seen[newPos] {
 				continue
 			}
 			seen[newPos] = true
-			for _, pp := range togo {
-				pp.check(w.d.pos)
-			}
 			switch w.m[newPos] {
 			case unknown:
-				//p := append(t.p, d)
-				//ip := w.d.pos
-				//for _, dd := range p {
-				//	ip = ip.move(dd)
-				//	//fmt.Print(" -",dd,"-> ", w.m[ip])
-				//}
-				//fmt.Println("Going from", w.d.pos, "to", newPos, "path", append(t.p, d), "P", t.dest)
-
 				return append(t.p, d)
 			case wall:
 				continue
 			case nothing:
-				for _, pp := range togo {
-					pp.check(w.d.pos)
-				}
-				p := append(t.p, d)
-				//ip := w.d.pos
-				//for i, dd := range t.p {
-				//	ip = ip.move(dd)
-				//	if t.cs[i] != ip {
-				//		panic(fmt.Sprintf("uh oh... %v -> %v", w.d, t))
-				//	}
-				//	//fmt.Print(" -",dd,"-> ", w.m[ip])
-				//	//if w.m[ip] != nothing {
-				//	//	fmt.Println("Before:", t.p, "dir", d, "after", p)
-				//	//	fmt.Println("Going from", w.d.pos, "to", newPos, "path", t.cs, "/X", t.dest.move(d), "P", t, w.m[t.dest])
-				//	//	panic("Oh noes")
-				//	//}
-				//}
-				for _, pp := range togo {
-					pp.check(w.d.pos)
-				}
-				newp := path{newPos, p, append(t.cs, newPos)}
-				newp.check(w.d.pos)
-				for _, pp := range togo {
-					pp.check(w.d.pos)
-				}
+				p := make([]int, len(t.p))
+				copy(p, t.p)
+				p = append(p, d)
+				newp := path{newPos, p}
 				togo = append(togo, newp)
-				for _, pp := range togo {
-					pp.check(w.d.pos)
-				}
 			case oxygen:
 				continue
 				//togo = append(togo, path{newPos, append(t.p, d)})
@@ -192,6 +125,7 @@ func main() {
 
 	w := world{m: make(map[coord]int), d: droid{in: in, out: out}}
 
+	// Explore maze.
 	for {
 		fmt.Print("\033[H\033[2J")
 		w.print()
@@ -199,13 +133,47 @@ func main() {
 		p := pathToUnknown(w)
 		if len(p) == 0 {
 			w.print()
-			fmt.Println("Done")
+			fmt.Println("Done", findDistance(w))
 			return
 		}
 		for _, d := range p {
 			w.tryMove(d)
 		}
 	}
+}
+
+func findDistance(w world) int {
+	pos := coord{0, 0}
+	seen := make(map[coord]bool)
+
+	togo := []path{{pos, []int{}}}
+
+	for len(togo) > 0 {
+		var t path
+		t, togo = togo[0], togo[1:]
+
+		for _, d := range dirs {
+			p := t.dest.move(d)
+			if seen[p] {
+				continue
+			}
+			seen[p] = true
+
+			switch w.m[p] {
+			case wall:
+				continue
+			case oxygen:
+				return len(t.p) + 1
+			case nothing:
+				newp := make([]int, len(t.p))
+				copy(newp, t.p)
+				togo = append(togo, path{
+					p, append(newp, d),
+				})
+			}
+		}
+	}
+	return 0
 }
 
 func (w world) print() {
