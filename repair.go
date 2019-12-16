@@ -133,13 +133,55 @@ func main() {
 		p := pathToUnknown(w)
 		if len(p) == 0 {
 			w.print()
-			fmt.Println("Done", findDistance(w))
+			fmt.Println("Done", findDistance(w), fillWithOxygen(w))
 			return
 		}
 		for _, d := range p {
 			w.tryMove(d)
 		}
 	}
+}
+
+func fillWithOxygen(w world) int {
+	var o coord
+	for c, e := range w.m {
+		if e == oxygen {
+			o = c
+			break
+		}
+	}
+
+	seen := make(map[coord]bool)
+	togo := []path{{o, []int{}}}
+
+	maxlen := 0
+
+	for len(togo) > 0 {
+		var t path
+		t, togo = togo[0], togo[1:]
+
+		for _, d := range dirs {
+			newPos := t.dest.move(d)
+			if seen[newPos] {
+				continue
+			}
+			seen[newPos] = true
+			switch w.m[newPos] {
+			case wall:
+				continue
+			case nothing:
+				fallthrough
+			case oxygen:
+				p := make([]int, len(t.p))
+				copy(p, t.p)
+				p = append(p, d)
+				newp := path{newPos, p}
+				togo = append(togo, newp)
+				maxlen = len(p)
+			}
+		}
+	}
+	return maxlen
 }
 
 func findDistance(w world) int {
